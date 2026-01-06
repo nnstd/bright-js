@@ -1,0 +1,40 @@
+{
+  "name": "@nnstd/bright-js",
+  "version": "0.1.0",
+  "description": "TypeScript client library for Bright search database",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown src/index.ts --dts --format cjs,esm",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "search",
+    "full-text",
+    "bleve",
+    "database",
+    "client",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nnstd/bright-js.git"
+  },
+  "devDependencies": {
+    "tsdown": "latest",
+    "typescript": "^5.0.0"
+  }
+}
