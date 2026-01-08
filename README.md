@@ -1,15 +1,17 @@
-# Bright JS Client
+# Bright JS
 
-TypeScript/JavaScript client library for [Bright](https://github.com/nnstd/bright) search database.
+TypeScript/JavaScript client library for [Bright](https://github.com/nnstd/bright) full-search database.
 
 ## Installation
 
 ```bash
-npm install @nnstd/bright-js
+npm install bright-client
 # or
-yarn add @nnstd/bright-js
+yarn add bright-client
 # or
-pnpm add @nnstd/bright-js
+pnpm add bright-client
+# or
+bun add bright-client
 ```
 
 ## Usage
@@ -17,7 +19,7 @@ pnpm add @nnstd/bright-js
 ### Create a Client
 
 ```typescript
-import { createClient } from '@nnstd/bright-js';
+import { createClient } from 'bright-client';
 
 const client = createClient({
   baseUrl: 'http://localhost:3000'
@@ -90,75 +92,6 @@ const results = await client.search<Product>('products', {
 console.log(results.hits); // Product[]
 console.log(results.totalHits); // number
 console.log(results.totalPages); // number
-```
-
-## API Reference
-
-### `createClient(options)`
-
-Creates a new Bright client instance.
-
-**Options:**
-- `baseUrl` (string, required) - Base URL of the Bright server
-- `fetch` (function, optional) - Custom fetch implementation
-
-### Index Management
-
-#### `createIndex(id, primaryKey?)`
-
-Creates a new search index.
-
-#### `updateIndex(id, config)`
-
-Updates index configuration.
-
-#### `deleteIndex(id)`
-
-Deletes an index and all its documents.
-
-### Document Operations
-
-#### `addDocuments(indexId, documents, format?)`
-
-Adds documents to an index. Documents with existing IDs will be updated.
-
-#### `updateDocument(indexId, documentId, updates)`
-
-Updates specific fields of a document.
-
-#### `deleteDocument(indexId, documentId)`
-
-Deletes a single document.
-
-#### `deleteDocuments(indexId, options)`
-
-Deletes multiple documents by IDs or filter query.
-
-**Options:**
-- `ids` (string[]) - Array of document IDs
-- `filter` (string) - Query filter
-
-### Search
-
-#### `search<T>(indexId, params?)`
-
-Searches for documents in an index.
-
-**Params:**
-- `q` (string) - Search query
-- `offset` (number) - Number of results to skip
-- `limit` (number) - Maximum results per page (default: 20)
-- `page` (number) - Page number
-- `sort` (string[]) - Sort fields (prefix with `-` for descending)
-- `attributesToRetrieve` (string[]) - Fields to include
-- `attributesToExclude` (string[]) - Fields to exclude
-
-## TypeScript
-
-This library is written in TypeScript and includes type definitions.
-
-```typescript
-import { BrightClient, SearchParams, SearchResponse } from '@nnstd/bright-js';
 ```
 
 ## License
