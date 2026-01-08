@@ -1,6 +1,6 @@
 # Bright JS
 
-TypeScript/JavaScript client library for [Bright](https://github.com/nnstd/bright) full-search database.
+TypeScript/JavaScript client library for [Bright](https://github.com/nnstd/bright) full-text search database.
 
 ## Installation
 
