@@ -1,34 +1,35 @@
-name: Publish to npm
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
-  publish:
+  release:
     runs-on: self-hosted
-    permissions:
-      contents: read
-      id-token: write
-    
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build package
-        run: npm run build
-
+      - name: Prepare
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+          cp src/*.h dist/
+          cp src/*.c dist/
+          echo "[install]" >> bunfig.toml
+          echo 'registry = { url = "https://registry.npmjs.org", token = "${{ secrets.NPM_TOKEN }}" }' >> bunfig.toml
+          
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: bun publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

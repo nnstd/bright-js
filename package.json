@@ -1,5 +1,5 @@
 {
-  "name": "@nnstd/bright-js",
+  "name": "bright-client",
   "version": "0.1.0",
   "description": "TypeScript client library for Bright search database",
   "main": "dist/index.cjs",
