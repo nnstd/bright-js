@@ -26,6 +26,7 @@ export interface SearchResponse<T = Record<string, any>> {
 
 export interface BrightClientOptions {
   baseUrl: string;
+  apiKey?: string;
   fetch?: typeof fetch;
 }
 
@@ -48,10 +49,12 @@ export interface IndexHandle<T = Record<string, any>> {
 
 export class BrightClient {
   private baseUrl: string;
+  private apiKey?: string;
   private fetchFn: typeof fetch;
 
   constructor(options: BrightClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
+    this.apiKey = options.apiKey;
     this.fetchFn = options.fetch || globalThis.fetch;
   }
 
@@ -64,6 +67,7 @@ export class BrightClient {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
         ...options?.headers,
       },
     });
