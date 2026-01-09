@@ -1,3 +1,8 @@
+import { BrightErrorResponse, createBrightError } from './errors';
+
+// Re-export all error classes
+export * from './errors';
+
 export interface IndexConfig {
   id: string;
   primaryKey?: string;
@@ -64,8 +69,10 @@ export class BrightClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      const errorResponse: BrightErrorResponse = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw createBrightError(response.status, errorResponse);
     }
 
     if (response.status === 204) {
