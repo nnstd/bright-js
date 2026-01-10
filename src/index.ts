@@ -38,7 +38,7 @@ export interface IndexHandle<T = Record<string, any>> {
   delete(): Promise<void>;
 
   // Document operations
-  addDocuments(documents: T[], format?: 'jsoneachrow'): Promise<{ indexed: number }>;
+  addDocuments(documents: T[], options?: { format?: 'jsoneachrow'; primaryKey?: string }): Promise<{ indexed: number }>;
   updateDocument(documentId: string, updates: Partial<T>): Promise<T>;
   deleteDocument(documentId: string): Promise<void>;
   deleteDocuments(options: { ids?: string[]; filter?: string }): Promise<void>;
@@ -115,10 +115,15 @@ export class BrightClient {
   async addDocuments<T = Record<string, any>>(
     indexId: string,
     documents: T[],
-    format: 'jsoneachrow' = 'jsoneachrow'
+    options?: { format?: 'jsoneachrow'; primaryKey?: string }
   ): Promise<{ indexed: number }> {
     const body = documents.map(doc => JSON.stringify(doc)).join('\n');
-    const params = new URLSearchParams({ format });
+    const params = new URLSearchParams();
+
+    params.append('format', options?.format || 'jsoneachrow');
+    if (options?.primaryKey) {
+      params.append('primaryKey', options.primaryKey);
+    }
 
     return this.request<{ indexed: number }>(`/indexes/${indexId}/documents?${params}`, {
       method: 'POST',
@@ -205,7 +210,7 @@ export class BrightClient {
       update: (config) => this.updateIndex(indexId, config),
       delete: () => this.deleteIndex(indexId),
 
-      addDocuments: (documents, format) => this.addDocuments<T>(indexId, documents, format),
+      addDocuments: (documents, options) => this.addDocuments<T>(indexId, documents, options),
       updateDocument: (documentId, updates) => this.updateDocument<T>(indexId, documentId, updates),
       deleteDocument: (documentId) => this.deleteDocument(indexId, documentId),
       deleteDocuments: (options) => this.deleteDocuments(indexId, options),
