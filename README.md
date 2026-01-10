@@ -1,6 +1,10 @@
-# Bright JS
+<div align="center">
+  <img src="assets/logo.svg" alt="Bright Logo" width="200"/>
+</div>
 
-TypeScript/JavaScript client library for [Bright](https://github.com/nnstd/bright) full-text search database.
+<div align="center">
+  TypeScript/JavaScript client library for <a href="https://github.com/nnstd/bright">Bright</a> full-text search database.
+</div>
 
 ## Installation
 
