@@ -1,34 +1,21 @@
 import { BrightErrorResponse, createBrightError } from './errors';
+import {
+  IndexConfig,
+  SearchParams,
+  SearchResponse,
+  BrightClientOptions,
+} from './types';
+import {
+  IngressConfig,
+  IngressState,
+  CreateIngressParams,
+  TypedCreateIngressParams,
+} from './ingress';
 
-// Re-export all error classes
+// Re-export all types
 export * from './errors';
-
-export interface IndexConfig {
-  id: string;
-  primaryKey?: string;
-}
-
-export interface SearchParams {
-  q?: string;
-  offset?: number;
-  limit?: number;
-  page?: number;
-  sort?: string[];
-  attributesToRetrieve?: string[];
-  attributesToExclude?: string[];
-}
-
-export interface SearchResponse<T = Record<string, any>> {
-  hits: T[];
-  totalHits: number;
-  totalPages: number;
-}
-
-export interface BrightClientOptions {
-  baseUrl: string;
-  apiKey?: string;
-  fetch?: typeof fetch;
-}
+export * from './types';
+export * from './ingress';
 
 export interface IndexHandle<T = Record<string, any>> {
   readonly id: string;
@@ -45,6 +32,13 @@ export interface IndexHandle<T = Record<string, any>> {
 
   // Search
   search(params?: SearchParams): Promise<SearchResponse<T>>;
+
+  // Ingress (Data Ingestion)
+  listIngresses(): Promise<IngressConfig[]>;
+  createIngress(params: CreateIngressParams | TypedCreateIngressParams): Promise<IngressConfig>;
+  getIngress(ingressId: string): Promise<IngressConfig>;
+  updateIngress(ingressId: string, state: IngressState): Promise<IngressConfig>;
+  deleteIngress(ingressId: string): Promise<void>;
 }
 
 export class BrightClient {
@@ -91,7 +85,7 @@ export class BrightClient {
   async createIndex(id: string, primaryKey?: string): Promise<IndexConfig> {
     const params = new URLSearchParams({ id });
     if (primaryKey) params.append('primaryKey', primaryKey);
-    
+
     return this.request<IndexConfig>(`/indexes?${params}`, {
       method: 'POST',
     });
@@ -153,15 +147,15 @@ export class BrightClient {
     options: { ids?: string[]; filter?: string }
   ): Promise<void> {
     const params = new URLSearchParams();
-    
+
     if (options.ids) {
       options.ids.forEach(id => params.append('ids[]', id));
     }
-    
+
     if (options.filter) {
       params.append('filter', options.filter);
     }
-    
+
     return this.request<void>(`/indexes/${indexId}/documents?${params}`, {
       method: 'DELETE',
     });
@@ -201,6 +195,43 @@ export class BrightClient {
     });
   }
 
+  // Ingress (Data Ingestion)
+
+  async listIngresses(indexId: string): Promise<IngressConfig[]> {
+    return this.request<IngressConfig[]>(`/indexes/${indexId}/ingresses`);
+  }
+
+  async createIngress(
+    indexId: string,
+    params: CreateIngressParams | TypedCreateIngressParams
+  ): Promise<IngressConfig> {
+    return this.request<IngressConfig>(`/indexes/${indexId}/ingresses`, {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getIngress(indexId: string, ingressId: string): Promise<IngressConfig> {
+    return this.request<IngressConfig>(`/indexes/${indexId}/ingresses/${ingressId}`);
+  }
+
+  async updateIngress(
+    indexId: string,
+    ingressId: string,
+    state: IngressState
+  ): Promise<IngressConfig> {
+    return this.request<IngressConfig>(`/indexes/${indexId}/ingresses/${ingressId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ state }),
+    });
+  }
+
+  async deleteIngress(indexId: string, ingressId: string): Promise<void> {
+    return this.request<void>(`/indexes/${indexId}/ingresses/${ingressId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Typed Index Handle
 
   index<T = Record<string, any>>(indexId: string): IndexHandle<T> {
@@ -216,6 +247,12 @@ export class BrightClient {
       deleteDocuments: (options) => this.deleteDocuments(indexId, options),
 
       search: (params) => this.search<T>(indexId, params),
+
+      listIngresses: () => this.listIngresses(indexId),
+      createIngress: (params) => this.createIngress(indexId, params),
+      getIngress: (ingressId) => this.getIngress(indexId, ingressId),
+      updateIngress: (ingressId, state) => this.updateIngress(indexId, ingressId, state),
+      deleteIngress: (ingressId) => this.deleteIngress(indexId, ingressId),
     };
   }
 }
