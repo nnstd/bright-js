@@ -54,7 +54,7 @@ export interface PostgresIngressResponse extends IngressBase {
 /** Fallback for unknown ingress types */
 export interface GenericIngressResponse extends IngressBase {
   type: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 /** Discriminated union of all ingress response types */
