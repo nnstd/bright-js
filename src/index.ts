@@ -4,6 +4,9 @@ import {
   SearchParams,
   SearchResponse,
   BrightClientOptions,
+  FieldFilter,
+  FieldRangeFilter,
+  SortField,
 } from './types';
 import {
   IngressConfig,
@@ -17,7 +20,7 @@ export * from './errors';
 export * from './types';
 export * from './ingress';
 
-export interface IndexHandle<T = Record<string, any>> {
+export interface IndexHandle<T = Record<string, unknown>> {
   readonly id: string;
 
   // Index operations
@@ -30,8 +33,10 @@ export interface IndexHandle<T = Record<string, any>> {
   deleteDocument(documentId: string): Promise<void>;
   deleteDocuments(options: { ids?: string[]; filter?: string }): Promise<void>;
 
-  // Search
-  search(params?: SearchParams): Promise<SearchResponse<T>>;
+  // Search with typed exclusion
+  search<Exclude extends keyof T = never>(
+    params?: SearchParams<T, Exclude>
+  ): Promise<SearchResponse<T, Exclude>>;
 
   // Ingress (Data Ingestion)
   listIngresses(): Promise<IngressConfig[]>;
@@ -39,6 +44,47 @@ export interface IndexHandle<T = Record<string, any>> {
   getIngress(ingressId: string): Promise<IngressConfig>;
   updateIngress(ingressId: string, state: IngressState): Promise<IngressConfig>;
   deleteIngress(ingressId: string): Promise<void>;
+}
+
+// Helper to build query string from typed filters
+function buildQueryFromFilters<T>(
+  filter?: FieldFilter<T>,
+  range?: FieldRangeFilter<T>
+): string {
+  const parts: string[] = [];
+
+  if (filter) {
+    for (const [key, val] of Object.entries(filter)) {
+      if (val === undefined) continue;
+      if (typeof val === 'object' && val !== null && 'value' in val) {
+        const { value, boost } = val as { value: unknown; boost?: number };
+        parts.push(boost ? `${key}:${value}^${boost}` : `${key}:${value}`);
+      } else {
+        parts.push(`${key}:${val}`);
+      }
+    }
+  }
+
+  if (range) {
+    for (const [key, rangeVal] of Object.entries(range)) {
+      if (rangeVal === undefined) continue;
+      const r = rangeVal as { gt?: unknown; gte?: unknown; lt?: unknown; lte?: unknown };
+      if (r.gt !== undefined) parts.push(`${key}:>${r.gt}`);
+      if (r.gte !== undefined) parts.push(`${key}:>=${r.gte}`);
+      if (r.lt !== undefined) parts.push(`${key}:<${r.lt}`);
+      if (r.lte !== undefined) parts.push(`${key}:<=${r.lte}`);
+    }
+  }
+
+  return parts.join(' ');
+}
+
+// Helper to normalize sort fields to string
+function normalizeSortField<T>(sort: SortField<T>): string {
+  if (typeof sort === 'object' && sort !== null && 'field' in sort) {
+    return sort.order === 'desc' ? `-${String(sort.field)}` : String(sort.field);
+  }
+  return String(sort);
 }
 
 export class BrightClient {
@@ -106,7 +152,7 @@ export class BrightClient {
 
   // Document Operations
 
-  async addDocuments<T = Record<string, any>>(
+  async addDocuments<T = Record<string, unknown>>(
     indexId: string,
     documents: T[],
     options?: { format?: 'jsoneachrow'; primaryKey?: string }
@@ -125,7 +171,7 @@ export class BrightClient {
     });
   }
 
-  async updateDocument<T = Record<string, any>>(
+  async updateDocument<T = Record<string, unknown>>(
     indexId: string,
     documentId: string,
     updates: Partial<T>
@@ -163,34 +209,38 @@ export class BrightClient {
 
   // Search
 
-  async search<T = Record<string, any>>(
+  async search<T = Record<string, unknown>, Exclude extends keyof T = never>(
     indexId: string,
-    params?: SearchParams
-  ): Promise<SearchResponse<T>> {
+    params?: SearchParams<T, Exclude>
+  ): Promise<SearchResponse<T, Exclude>> {
     const searchParams = new URLSearchParams();
 
-    if (params?.q) searchParams.append('q', params.q);
+    // Build query from q + typed filters
+    const filterQuery = buildQueryFromFilters(params?.filter, params?.range);
+    const fullQuery = [params?.q, filterQuery].filter(Boolean).join(' ');
+    if (fullQuery) searchParams.append('q', fullQuery);
+
     if (params?.offset) searchParams.append('offset', params.offset.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.page) searchParams.append('page', params.page.toString());
 
     if (params?.sort) {
-      params.sort.forEach(s => searchParams.append('sort[]', s));
+      params.sort.forEach(s => searchParams.append('sort[]', normalizeSortField(s)));
     }
 
     if (params?.attributesToRetrieve) {
       params.attributesToRetrieve.forEach(attr =>
-        searchParams.append('attributesToRetrieve[]', attr)
+        searchParams.append('attributesToRetrieve[]', String(attr))
       );
     }
 
     if (params?.attributesToExclude) {
       params.attributesToExclude.forEach(attr =>
-        searchParams.append('attributesToExclude[]', attr)
+        searchParams.append('attributesToExclude[]', String(attr))
       );
     }
 
-    return this.request<SearchResponse<T>>(`/indexes/${indexId}/searches?${searchParams}`, {
+    return this.request<SearchResponse<T, Exclude>>(`/indexes/${indexId}/searches?${searchParams}`, {
       method: 'POST',
     });
   }
@@ -234,7 +284,7 @@ export class BrightClient {
 
   // Typed Index Handle
 
-  index<T = Record<string, any>>(indexId: string): IndexHandle<T> {
+  index<T = Record<string, unknown>>(indexId: string): IndexHandle<T> {
     return {
       id: indexId,
 
@@ -246,7 +296,8 @@ export class BrightClient {
       deleteDocument: (documentId) => this.deleteDocument(indexId, documentId),
       deleteDocuments: (options) => this.deleteDocuments(indexId, options),
 
-      search: (params) => this.search<T>(indexId, params),
+      search: <Exclude extends keyof T = never>(params?: SearchParams<T, Exclude>) =>
+        this.search<T, Exclude>(indexId, params),
 
       listIngresses: () => this.listIngresses(indexId),
       createIngress: (params) => this.createIngress(indexId, params),
