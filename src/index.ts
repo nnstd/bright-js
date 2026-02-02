@@ -248,7 +248,8 @@ export class BrightClient {
   // Ingress (Data Ingestion)
 
   async listIngresses(indexId: string): Promise<IngressConfig[]> {
-    return this.request<IngressConfig[]>(`/indexes/${indexId}/ingresses`);
+    const response = await this.request<{ ingresses: IngressConfig[] }>(`/indexes/${indexId}/ingresses`);
+    return response.ingresses;
   }
 
   async createIngress(

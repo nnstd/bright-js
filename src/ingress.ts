@@ -33,15 +33,22 @@ export interface PostgresIngressConfig {
   auto_triggers?: boolean;
 }
 
-// Base ingress fields shared by all ingress types
+// Ingress statistics from the server
+export interface IngressStatistics {
+  last_sync_at?: string;
+  documents_synced: number;
+  documents_deleted: number;
+  full_sync_complete: boolean;
+  last_error?: string;
+  error_count: number;
+}
 
+// Base ingress fields shared by all ingress types
 interface IngressBase {
   id: string;
   index_id: string;
   status: IngressStatus;
-  last_sync?: string;
-  documents_synced?: number;
-  errors?: number;
+  statistics: IngressStatistics;
 }
 
 // Typed ingress configs (discriminated union)
@@ -63,11 +70,13 @@ export type IngressConfig = PostgresIngressResponse | GenericIngressResponse;
 // Create params
 
 export interface CreateIngressParams {
+  id: string;
   type: string;
   config: Record<string, unknown>;
 }
 
 export interface CreatePostgresIngressParams {
+  id: string;
   type: 'postgres';
   config: PostgresIngressConfig;
 }
