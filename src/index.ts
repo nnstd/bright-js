@@ -1,4 +1,4 @@
-import { BrightErrorResponse, createBrightError } from './errors';
+import { BrightErrorResponse, createBrightError, NotFoundError } from './errors';
 import {
   IndexConfig,
   SearchParams,
@@ -148,6 +148,20 @@ export class BrightClient {
     return this.request<void>(`/indexes/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  async indexExists(id: string): Promise<boolean> {
+    try {
+      await this.request<IndexConfig>(`/indexes/${id}`, {
+        method: 'GET',
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   // Document Operations
