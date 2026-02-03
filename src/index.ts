@@ -42,6 +42,7 @@ export interface IndexHandle<T = Record<string, unknown>> {
   listIngresses(): Promise<IngressConfig[]>;
   createIngress(params: CreateIngressParams | TypedCreateIngressParams): Promise<IngressConfig>;
   getIngress(ingressId: string): Promise<IngressConfig>;
+  ingressExists(ingressId: string): Promise<boolean>;
   updateIngress(ingressId: string, state: IngressState): Promise<IngressConfig>;
   deleteIngress(ingressId: string): Promise<void>;
 }
@@ -280,6 +281,20 @@ export class BrightClient {
     return this.request<IngressConfig>(`/indexes/${indexId}/ingresses/${ingressId}`);
   }
 
+  async ingressExists(indexId: string, ingressId: string): Promise<boolean> {
+    try {
+      await this.request<IngressConfig>(`/indexes/${indexId}/ingresses/${ingressId}`, {
+        method: 'GET',
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   async updateIngress(
     indexId: string,
     ingressId: string,
@@ -317,6 +332,7 @@ export class BrightClient {
       listIngresses: () => this.listIngresses(indexId),
       createIngress: (params) => this.createIngress(indexId, params),
       getIngress: (ingressId) => this.getIngress(indexId, ingressId),
+      ingressExists: (ingressId) => this.ingressExists(indexId, ingressId),
       updateIngress: (ingressId, state) => this.updateIngress(indexId, ingressId, state),
       deleteIngress: (ingressId) => this.deleteIngress(indexId, ingressId),
     };
